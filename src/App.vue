@@ -1,15 +1,21 @@
 <template>
   <img alt="Vue logo" src="./assets/logo.png">
   <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+
+      <router-link to="/WalletGenerator">WalletGenerator</router-link>
+      <router-link to="/LoginWallet">LoginWallet</router-link>
+       <!-- 路由视图，显示当前路由对应的组件 -->
+      <router-view></router-view>
+    </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+//import router from './router';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
   }
 }
 </script>

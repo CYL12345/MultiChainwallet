@@ -1,5 +1,9 @@
 module.exports = {
   presets: [
-    '@vue/cli-plugin-babel/preset'
+    '@vue/cli-plugin-babel/preset' 
+  ],
+  plugins: [
+    ['@babel/plugin-proposal-private-methods', { loose: true }],
+    ['@babel/plugin-proposal-class-properties', { loose: true }]
   ]
-}
+};
