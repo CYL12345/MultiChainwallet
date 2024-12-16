@@ -5,7 +5,12 @@
         <div>
             <form @submit.prevent="generateMnemonic">
                 <label for="password">enter PIN</label>
-                <input type="password" id="password" v-model="password" required/>
+                <input type="password" id="password" v-model="password" required />
+                <!-- 添加一个调试按钮来检查 password 的值 -->
+                <button type="button" @click="debugPassword">Debug Password</button>
+                <label v-for="(chain,index) in blockchains" :key="index">
+                    <input type="checkbox" :value="chain.value" v-model="selectBlockChain">{{chain.label}}
+                </label>
                 <button type="submit">Generate Mnemonic</button>
             </form>
         </div>
@@ -25,27 +30,118 @@
 
 <script>
 
-    import {ref} from 'vue';
-    import {ethers} from 'ethers';
+    import {ref,nextTick} from 'vue';
+    import {ethers, Wallet} from 'ethers';
     import * as bip39 from 'bip39';
+    //import * as bip32 from 'bip32';
     import { Buffer } from 'buffer';
     import CryptoJS from 'crypto-js';
+    import BIP32Factory from 'bip32';
+    import * as ecc from 'tiny-secp256k1';
 
     window.Buffer = Buffer;
     export default{
         setup(){
+            const blockchains =ref([
+                {label:'ethereum',value:'ethereum'},
+                {label:'Binance Smart Chain',value:'binance'},
+                {label:'Polygon',value:'polygon'},
+                {label:'Solana',value:'solana'},
+            ])
+            const password = ref(null);
+            const bip32 = BIP32Factory(ecc);
+            const selectBlockChain = ref([]);
             const mnemonic = ref(null);
             const privateKey = ref(null);
             const address = ref(null);
-            const generateMnemonic = (password) =>{
+            const accounts = ref({});
+                        // 添加一个调试函数来检查 password 的值
+                const debugPassword = () => {
+                console.log('Current password value:', password.value);
+                };
+            const generateMnemonic = async() =>{
                 try{
-                    
+                    await nextTick();
+                    console.log('区块链',selectBlockChain.value,password.value);
+                    const userPassword = password.value;
                     const generatdMnemonic = bip39.generateMnemonic(256);
                     mnemonic.value = generatdMnemonic;
 
-                    const encryptedMnemonic = encryptMnemonic(generatdMnemonic.toString(),password.toString());
+                    const seed = await bip39.mnemonicToSeed(generatdMnemonic,userPassword);
+                    const rootKey = bip32.fromSeed(seed);
 
+                    const encryptedMnemonic = encryptMnemonic(generatdMnemonic.toString(),userPassword.toString());
                     localStorage.setItem('encryptedMnemonic',encryptedMnemonic);
+                    selectBlockChain.value.forEach(chain=>{
+                        let path,wallet;
+                        switch(chain){
+                            case 'ethereum':{
+                                path = "m/44'/60'/0'/0/0";
+                                const ethNode = rootKey.derivePath(path);
+                                // 确保私钥是 32 字节
+                                if (ethNode.privateKey.length !== 32) {
+                                    throw new Error('Invalid private key length. Expected 32 bytes.');
+                                }
+                                const ethPrivateKey = `${ethers.utils.hexlify(ethNode.privateKey)}`;
+                                wallet = new Wallet(ethPrivateKey);
+                                accounts.value[chain]={
+                                    address:wallet.address,
+                                    privateKey:ethPrivateKey,
+                                    balance:0,
+                                };
+                            }
+                            break;
+
+                            case 'binance':
+                                {
+                                    path =  "m/44'/60'/1'/0/0";
+                                    const bscNode = rootKey.derivePath(path);
+
+                                    if (bscNode.privateKey.length !== 32) {
+                                        throw new Error('Invalid private key length. Expected 32 bytes.');
+                                    }
+                                    const bscPrivateKey = `${ethers.utils.hexlify(bscNode.privateKey)}`;
+                                    wallet = new Wallet(bscPrivateKey);
+                                    accounts.value[chain]={
+                                        address:wallet.address,
+                                        privateKey:bscPrivateKey,
+                                        balance:0,
+                                    };
+                                }
+                                break;
+                            
+                                case 'polygon':
+                                    {
+                                        path = "m/44'/60'/2'/0/0";
+                                        const polNode = rootKey.derivePath(path);
+
+                                        if (polNode.privateKey.length !== 32) {
+                                            throw new Error('Invalid private key length. Expected 32 bytes.');
+                                        }
+                                        const polPrivateKey = `${ethers.utils.hexlify(polNode.privateKey)}`;
+                                        wallet = new Wallet(polPrivateKey);
+                                        accounts.value[chain]={
+                                            address:wallet.address,
+                                            privateKey:polPrivateKey,
+                                            balance:0,
+                                        };
+                                    }
+                                    break;
+
+                                case 'solana':
+                                    {
+                                        const { Keypair } = require('@solana/web3.js');
+                                        const solanaKeypair = Keypair.generate();
+                                        accounts.value[chain] = {
+                                            address: solanaKeypair.address,
+                                            privateKey: solanaKeypair.privateKey,
+                                            balance: 0,
+                                        };
+                                    }
+                                    break;
+                            }
+                            console.log(`${chain} 地址:`, accounts.value[chain].address);
+                    });
 
 
                     deriveAccountFromMnemonic(generatdMnemonic);
@@ -67,16 +163,6 @@
                     console.log("encryptMnemonic error",error);
                 }
             };
-            /*
-            const decryptMnemonic = async(password,encryptedDate)=>{
-                try{
-                    const decryptedDate =  await ethers.utils.decrypt(password,encryptedDate);
-                    return decryptedDate;
-                }catch(error){
-                    console.log("decryptMnemonic error",error);
-                }
-            };
-            */
 
             const deriveAccountFromMnemonic = (mnemonic) =>{
                 try{
@@ -87,14 +173,16 @@
                     privateKey.value = wallet.privateKey;
                     address.value = wallet.address;
 
-                    console.log('Generated private key:', wallet.privateKey);
-                    console.log('Generated address:', wallet.address);
                 }catch(error){
                     console.error('Error deriving account from mnemonic:', error);   
                 }
             };
 
             return{
+                password,
+                selectBlockChain,
+                debugPassword,
+                blockchains,
                 mnemonic,
                 privateKey,
                 address,
