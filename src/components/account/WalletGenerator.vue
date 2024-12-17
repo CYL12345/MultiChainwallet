@@ -6,8 +6,6 @@
             <form @submit.prevent="generateMnemonic">
                 <label for="password">enter PIN</label>
                 <input type="password" id="password" v-model="password" required />
-                <!-- 添加一个调试按钮来检查 password 的值 -->
-                <button type="button" @click="debugPassword">Debug Password</button>
                 <label v-for="(chain,index) in blockchains" :key="index">
                     <input type="checkbox" :value="chain.value" v-model="selectBlockChain">{{chain.label}}
                 </label>
@@ -32,12 +30,14 @@
 
     import {ref,nextTick} from 'vue';
     import {ethers, Wallet} from 'ethers';
-    import * as bip39 from 'bip39';
-    //import * as bip32 from 'bip32';
     import { Buffer } from 'buffer';
+    import { Keypair } from '@solana/web3.js';
+    import { useRouter } from 'vue-router';
     import CryptoJS from 'crypto-js';
     import BIP32Factory from 'bip32';
     import * as ecc from 'tiny-secp256k1';
+    import * as bip39 from 'bip39';
+    import * as ed25519 from 'ed25519-hd-key';
 
     window.Buffer = Buffer;
     export default{
@@ -55,14 +55,12 @@
             const privateKey = ref(null);
             const address = ref(null);
             const accounts = ref({});
-                        // 添加一个调试函数来检查 password 的值
-                const debugPassword = () => {
-                console.log('Current password value:', password.value);
-                };
+            const router = useRouter();
+
             const generateMnemonic = async() =>{
                 try{
                     await nextTick();
-                    console.log('区块链',selectBlockChain.value,password.value);
+                    console.log('密码',password);
                     const userPassword = password.value;
                     const generatdMnemonic = bip39.generateMnemonic(256);
                     mnemonic.value = generatdMnemonic;
@@ -72,6 +70,30 @@
 
                     const encryptedMnemonic = encryptMnemonic(generatdMnemonic.toString(),userPassword.toString());
                     localStorage.setItem('encryptedMnemonic',encryptedMnemonic);
+                
+                    deriveAccountFromMnemonic(seed,rootKey);
+                    await router.push({name: 'LoginWallet'});
+                }catch(error){
+                    console.log("generateMneminic error",error);
+                }
+            };
+            
+            const encryptMnemonic = (generatdMnemonic,password)=>{
+                try{
+                    // Ensure both mnemonic and password are strings
+                    if (typeof generatdMnemonic !== 'string' || typeof password !== 'string') {
+                        throw new Error('generatdMnemonic and password must be strings.');
+                    }
+                    const encryptedDate =  CryptoJS.AES.encrypt(generatdMnemonic,password);
+                    console.log('encryptedDate',encryptedDate);
+                    return encryptedDate.toString();
+                }catch(error){
+                    console.log("encryptMnemonic error",error);
+                }
+            };
+
+            const deriveAccountFromMnemonic = (seed,rootKey) =>{
+                try{
                     selectBlockChain.value.forEach(chain=>{
                         let path,wallet;
                         switch(chain){
@@ -130,49 +152,20 @@
 
                                 case 'solana':
                                     {
-                                        const { Keypair } = require('@solana/web3.js');
-                                        const solanaKeypair = Keypair.generate();
+                                        const path = "m/44'/501'/0'/0'";
+                                        console.log(seed.toString("hex"));
+                                        const solanaKeypair = Keypair.fromSeed(ed25519.derivePath(path, seed.toString("hex")).key);
+                                        console.log(solanaKeypair);
                                         accounts.value[chain] = {
-                                            address: solanaKeypair.address,
-                                            privateKey: solanaKeypair.privateKey,
+                                            address: solanaKeypair.publicKey.toBase58(),
+                                            privateKey: solanaKeypair.secretKey,
                                             balance: 0,
                                         };
                                     }
                                     break;
                             }
                             console.log(`${chain} 地址:`, accounts.value[chain].address);
-                    });
-
-
-                    deriveAccountFromMnemonic(generatdMnemonic);
-                }catch(error){
-                    console.log("generateMneminic error",error);
-                }
-            };
-            
-            const encryptMnemonic = (generatdMnemonic,password)=>{
-                try{
-                    // Ensure both mnemonic and password are strings
-                    if (typeof generatdMnemonic !== 'string' || typeof password !== 'string') {
-                        throw new Error('generatdMnemonic and password must be strings.');
-                    }
-                    const encryptedDate =  CryptoJS.AES.encrypt(generatdMnemonic,password);
-                    console.log('encryptedDate',encryptedDate);
-                    return encryptedDate.toString();
-                }catch(error){
-                    console.log("encryptMnemonic error",error);
-                }
-            };
-
-            const deriveAccountFromMnemonic = (mnemonic) =>{
-                try{
-                    //const seed = bip39.mnemonicToSeedSync(mnemonic);
-
-                    const wallet = ethers.Wallet.fromMnemonic(mnemonic,"m/44'/60'/0'/0/0");
-
-                    privateKey.value = wallet.privateKey;
-                    address.value = wallet.address;
-
+                        });
                 }catch(error){
                     console.error('Error deriving account from mnemonic:', error);   
                 }
@@ -181,7 +174,6 @@
             return{
                 password,
                 selectBlockChain,
-                debugPassword,
                 blockchains,
                 mnemonic,
                 privateKey,

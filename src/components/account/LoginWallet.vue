@@ -3,7 +3,7 @@
     <div>
         <form @submit.prevent="loginWallet">
             <label for="password">enter PID</label>
-            <input type="password" id="password" v-model="password" required/>
+            <input type="password" id="password" v-model="password" required />
             <button type="submit">LOGIN</button>
             <p v-if="address">{{ address }}</p>
             <p v-if="error">{{ error }}</p>
@@ -12,31 +12,38 @@
 </template>
 
 <script>
-    import {ref,onMounted} from 'vue';
+    import {ref,onMounted,nextTick} from 'vue';
     import { ethers } from 'ethers';
     import CryptoJS from 'crypto-js';
+    import { useRouter } from 'vue-router';
     import * as bip39 from 'bip39';
 
     export default{
         setup(){
-            const error = ref("");
-            const address = ref("");
-
+            const error = ref(null);
+            const address = ref(null)
+            const password = ref('');
+            const router = useRouter();
             onMounted(() =>{
                 address.value = localStorage.getItem('address');
             });
 
-            const loginWallet = async (password) =>{
+            const loginWallet = async () =>{
                 try{
+                    await nextTick();
+                    const userPassword = password.value;
                     const encryptedMnemonic =await localStorage.getItem('encryptedMnemonic');
                     console.log("encryptedMnemonic:",encryptedMnemonic);
-                    if(!encryptedMnemonic || !password){
+                    console.log("密码:",password);
+
+                    if(!encryptedMnemonic || !userPassword){
                         error.value = "No account found or password is empty.";
                         return;
                     }
-                    const decryptBool = decrytpMnemonic(encryptedMnemonic.toString(),password.toString());
+                    const decryptBool = decrytpMnemonic(encryptedMnemonic.toString(),userPassword);
                     if(decryptBool){
                         console.log("login success.");
+                        router.push({name:'Home'});
                     }else{
                         error.value = "login error.";
                     }
@@ -70,6 +77,7 @@
             };
 
             return{
+                password,
                 address,
                 error,
                 loginWallet
