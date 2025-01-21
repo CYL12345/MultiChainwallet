@@ -20,6 +20,7 @@ module.exports = defineConfig({
         "buffer": require.resolve("buffer/"),
         "process": require.resolve("process/browser"),
         "util": require.resolve("util/"),
+        "timers": require.resolve("timers-browserify")
       }
     }
   },

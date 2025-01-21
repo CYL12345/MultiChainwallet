@@ -5,77 +5,70 @@
             <label for="password">enter PID</label>
             <input type="password" id="password" v-model="password" required />
             <button type="submit">LOGIN</button>
-            <p v-if="address">{{ address }}</p>
             <p v-if="error">{{ error }}</p>
         </form>
     </div>
 </template>
 
 <script>
-    import {ref,onMounted,nextTick} from 'vue';
-    import { ethers } from 'ethers';
-    import CryptoJS from 'crypto-js';
+    import {ref,onMounted,nextTick,toRaw} from 'vue';
+    import { useStore } from 'vuex';
     import { useRouter } from 'vue-router';
-    import * as bip39 from 'bip39';
+    import { useLocalStorage } from '@vueuse/core';
+    import { getEncryptedMnemonicByPWD,saveEncryptedMnemonicByPSS,setWallets } from '../db/walletDB';
+    import { initializeAllWallet } from '../services/chainService';
+    import { generatdSessionKey } from '../services/mnemonicService';
+    import { fetchAndPrintTransactionHistory } from '../services/ethTransactionService';
 
     export default{
         setup(){
             const error = ref(null);
             const address = ref(null)
             const password = ref('');
+            const store = useStore();
             const router = useRouter();
+            const isAuthenticated = useLocalStorage('isAuthenticated',false);
             onMounted(() =>{
                 address.value = localStorage.getItem('address');
             });
 
-            const loginWallet = async () =>{
+            const loginWallet = async () =>{ 
                 try{
                     await nextTick();
                     const userPassword = password.value;
-                    const encryptedMnemonic =await localStorage.getItem('encryptedMnemonic');
-                    console.log("encryptedMnemonic:",encryptedMnemonic);
-                    console.log("密码:",password);
+                    const decryptedMnemonic =await getEncryptedMnemonicByPWD(userPassword);
+                    if(decryptedMnemonic){
+                        const wallets = toRaw(await initializeAllWallet(decryptedMnemonic,password));
+                        const chain = 'Ethereum Mainnet';
+                        const currentChainId = '1';
+                        const sessionKey = generatdSessionKey();
+                        
+                        store.dispatch('wallet/addWallet',{id:currentChainId, wallet:wallets[chain].walletAddress, balance:wallets[chain].balance});
+                        store.dispatch("chains/setCurrentChainId",currentChainId);
+                        console.log('loginWallet', store.getters['wallet/getBalance']);
 
-                    if(!encryptedMnemonic || !userPassword){
-                        error.value = "No account found or password is empty.";
-                        return;
-                    }
-                    const decryptBool = decrytpMnemonic(encryptedMnemonic.toString(),userPassword);
-                    if(decryptBool){
-                        console.log("login success.");
+
+                        saveEncryptedMnemonicByPSS(decryptedMnemonic,sessionKey);
+
+                        localStorage.setItem('sessionKey',sessionKey);
+                        store.commit('sessionKey/SET_SESSION_KEY',sessionKey);
+                        store.dispatch('sessionKey/startSessionTimer');
+
+                        setWallets(wallets);
+
+                        fetchAndPrintTransactionHistory(wallets[chain].walletAddress);
+
+                        isAuthenticated.value = true;
                         router.push({name:'Home'});
                     }else{
                         error.value = "login error.";
                     }
                 }catch(error){
-                    console.log("loginWallet error",error);
+                    console.error("loginWallet error",error);
                 }
             };
 
-            const decrytpMnemonic = (encryptedMnemonic,password) =>{
-                try{
-                    const bytes = CryptoJS.AES.decrypt(encryptedMnemonic,password);
-                    let decryptedMnemonic = '';
-                     if(bytes.toString(CryptoJS.enc.Utf8)){
-                        decryptedMnemonic = bytes.toString(CryptoJS.enc.Utf8);
-                    }else{
-                        console.log(bytes.toString(CryptoJS.enc.Utf8));
-                        throw new Error("Incorrect password");
-                    }
-
-                    if(!bip39.validateMnemonic(decryptedMnemonic)){
-                        throw new Error("Invalid mnemonic");
-                    }
-
-                    const wallet = ethers.Wallet.fromMnemonic(decryptedMnemonic);
-                    address.value = wallet.address;
-                    error.value = ''; // Clear any previous errors
-                    return true;
-                }catch(error){
-                    console.error("login Failed",error);
-                }
-            };
-
+        
             return{
                 password,
                 address,

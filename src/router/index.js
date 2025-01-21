@@ -1,19 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import ReigisterWallet from '@/components/account/ReigisterWallet.vue';
 import WalletGenerator from '@/components/account/WalletGenerator.vue';
 import LoginWallet from '@/components/account/LoginWallet.vue';
 import Home from '@/components/Home.vue';
-
+import TransacationList from '@/components/modal/TransactionList.vue';
 const routes = [
     {
         path:'/LoginWallet',
         name:'LoginWallet',
         component:LoginWallet
-    },
-    {
-        path:'/ReigisterWallet',
-        name:'ReigisterWallet',
-        component:ReigisterWallet
     },
     {
         path:'/WalletGenerator',
@@ -23,7 +17,14 @@ const routes = [
     {
         path:'/Home',
         name:'Home',
-        component:Home
+        component:Home,
+        meta:{requiresAuth:true},
+        children:[
+            {
+                path: 'transactions',
+                component: TransacationList
+            }
+        ]
     }
 ];
 const router = createRouter({
