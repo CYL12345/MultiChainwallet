@@ -4,6 +4,8 @@
   <div id="app">
       <router-link to="/WalletGenerator">WalletGenerator</router-link>
       <router-link to="/LoginWallet">LoginWallet</router-link>
+      <router-link to="/OrderTransactions">OrderTransactions</router-link>
+      <router-link to="/TradeHistory">TradeHistory</router-link>
        <!-- 路由视图，显示当前路由对应的组件 -->
       <router-view></router-view>
     </div>

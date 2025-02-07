@@ -3,6 +3,8 @@ import WalletGenerator from '@/components/account/WalletGenerator.vue';
 import LoginWallet from '@/components/account/LoginWallet.vue';
 import Home from '@/components/Home.vue';
 import TransacationList from '@/components/modal/TransactionList.vue';
+import OrderTransactions from '@/components/modal/OrderTransactions.vue';
+import TradeHistory from '@/components/modal/TradeHistory.vue';
 const routes = [
     {
         path:'/LoginWallet',
@@ -13,6 +15,16 @@ const routes = [
         path:'/WalletGenerator',
         name:'WalletGenerator',
         component:WalletGenerator
+    },
+    {
+        path:'/OrderTransactions',
+        name:'OrderTransactions',
+        component:OrderTransactions
+    },
+    {
+        path:'/TradeHistory',
+        name:'TradeHistory',
+        component:TradeHistory
     },
     {
         path:'/Home',
