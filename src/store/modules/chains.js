@@ -1,24 +1,30 @@
-import { chainConfig } from "@/components/services/chainConfig";
+//import { chainConfig } from "@/components/services/chainConfig";
 
 const state = {
-    currentChainId: '1'
+    currentChainId: '1',
+    currentChainName: ''
 };
 
 const mutations = {
     setCurrentChainId(state, chainId) {
         state.currentChainId = chainId;
-        console.log("setCurrentChainId", state.currentChainId);
+    },
+    setCurrentChainName(state, chainName) {
+        state.currentChainName = chainName;
     }
 };
 
 const actions = {
     setCurrentChainId({ commit }, chainId) {
         commit('setCurrentChainId', chainId);
-    }
+    },
+    setCurrentChainName({ commit }, chainName) {
+        commit('setCurrentChainName', chainName);
+    },
 };
 
 const getters = {
-    getCurrentChainName: (state) => chainConfig[state.currentChainId]?.name || 'Unknown Chain',
+    getCurrentChainName: (state) =>state.currentChainName ,
     getCurrentChainId: (state) => state.currentChainId
 };
 

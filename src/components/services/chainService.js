@@ -72,6 +72,12 @@ export async function checkConnection(provider) {
     }
 }
 
+export async function importWalletByPrivateKey(privateKey) {
+    const wallet = new ethers.Wallet(privateKey);
+    console.log('importWalletByPrivateKey',wallet);
+    return wallet;
+}
+
 export function getWalletAddress(){
     return wallet.value?.address || null;
 }

@@ -8,6 +8,15 @@
             <p v-if="error">{{ error }}</p>
         </form>
     </div>
+    <div>
+        <form @submit.prevent="enterAccount">
+            <label for="privateKey">enter privateKey</label>
+            <input type="text" id="privateKey" v-model="privateKey" required />
+            <input type="text" id="network" v-model="network" required />
+            <button type="submit">LOGIN</button>
+            <p v-if="error">{{ error }}</p>
+        </form>
+    </div>
 </template>
 
 <script>
@@ -16,9 +25,12 @@
     import { useRouter } from 'vue-router';
     import { useLocalStorage } from '@vueuse/core';
     import { getEncryptedMnemonicByPWD,saveEncryptedMnemonicByPSS,setWallets } from '../db/walletDB';
-    import { initializeAllWallet } from '../services/chainService';
+    import { initializeAllWallet,importWalletByPrivateKey } from '../services/chainService';
     import { generatdSessionKey } from '../services/mnemonicService';
-    import { fetchAndPrintTransactionHistory } from '../services/ethTransactionService';
+    //import { fetchAndPrintTransactionHistory } from '../services/ethTransactionService';
+    //import { fetchAndPrintTransactionHistoryByNetwork } from '../services/testnetworkTransactionService';
+    import { fetchAndPrintNormalTransactionHistoryByNetwork } from '../services/transactionService';
+    import { ethers } from "ethers";
 
     export default{
         setup(){
@@ -28,6 +40,9 @@
             const store = useStore();
             const router = useRouter();
             const isAuthenticated = useLocalStorage('isAuthenticated',false);
+            const privateKey = ref('');
+            const network = ref('');
+
             onMounted(() =>{
                 address.value = localStorage.getItem('address');
             });
@@ -39,13 +54,14 @@
                     const decryptedMnemonic =await getEncryptedMnemonicByPWD(userPassword);
                     if(decryptedMnemonic){
                         const wallets = toRaw(await initializeAllWallet(decryptedMnemonic,password));
-                        const chain = 'Ethereum Mainnet';
+                        const chain = 'ethereum';
                         const currentChainId = '1';
                         const sessionKey = generatdSessionKey();
                         
                         store.dispatch('wallet/addWallet',{id:currentChainId, wallet:wallets[chain].walletAddress, balance:wallets[chain].balance});
                         store.dispatch("chains/setCurrentChainId",currentChainId);
-                        console.log('loginWallet', store.getters['wallet/getBalance']);
+                        store.dispatch("chains/setCurrentChainName",chain);
+                        console.log('loginWallet', store.getters['chains/getCurrentChainName']);
 
 
                         saveEncryptedMnemonicByPSS(decryptedMnemonic,sessionKey);
@@ -56,7 +72,7 @@
 
                         setWallets(wallets);
 
-                        fetchAndPrintTransactionHistory(wallets[chain].walletAddress);
+                        fetchAndPrintNormalTransactionHistoryByNetwork(chain,wallets[chain].walletAddress);
 
                         isAuthenticated.value = true;
                         router.push({name:'Home'});
@@ -68,12 +84,34 @@
                 }
             };
 
-        
+            const enterAccount = async() =>{
+              try{
+                const wallet = await importWalletByPrivateKey(privateKey.value);
+                const provider = new ethers.providers.JsonRpcProvider(network.value);
+                const account = wallet.connect(provider);
+                const balance = await account.getBalance();
+                const balanceETH = ethers.utils.formatEther(balance);
+                const chainName = 'ganache';
+                store.dispatch('wallet/addWallet',{id:network.value, wallet:wallet.address, balance:balanceETH});
+                store.dispatch("chains/setCurrentChainName",chainName);
+
+                console.log('enterAccount', store.getters['chains/getCurrentChainName'],chainName);
+                await fetchAndPrintNormalTransactionHistoryByNetwork(chainName,wallet.address);
+                isAuthenticated.value = true;
+                router.push({name:'Home'});
+              }catch (error){
+                console.error("enterAccount",error);
+              }
+            }
+
             return{
                 password,
                 address,
                 error,
-                loginWallet
+                loginWallet,
+                enterAccount,
+                privateKey,
+                network
             }
         }
     }

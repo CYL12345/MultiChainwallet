@@ -57,20 +57,20 @@ export async function selectDeriveAccountsFromRootkey(mnemonic,password,selectBl
         const derivePromise = selectBlockChain.value.map(async (chain)=>{
             let path;
             switch(chain){
-                case 'Ethereum Mainnet':{
+                case 'ethereum':{
                     path = "m/44'/60'/0'/0/0";
                     currentChainId.value = '1';
                     currentChain = computed(() => chainConfig[currentChainId.value]);
                     break;
 
                 }
-                case 'Binance Smart Chain Mainnet':{
+                case 'bsc':{
                     path = "m/44'/60'/1'/0/0";
                     currentChainId.value = '56';
                     currentChain = computed(() => chainConfig[currentChainId.value]);
                     break;
                 }
-                case 'Polygon':{
+                case 'Pol':{
                     path = "m/44'/60'/2'/0/0";
                     currentChainId.value = '137';
                     currentChain = computed(() => chainConfig[currentChainId.value]);

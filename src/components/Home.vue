@@ -1,4 +1,5 @@
 <template>
+
     <div>
     <select v-model="selectedChainId" v-if="chains" @change="handleChainChange">
       <option v-for="(chain, chainId) in chains" :key="chainId" :value="chainId">
@@ -12,7 +13,6 @@
       <h1>My Accounts</h1>
       <div>
         <ul>余额{{ balance !== '-' ? balance : '加载中...' }}</ul>
-
         <ul v-if="currentChainName">{{ currentChainName }}</ul>
         <ul v-if="walletAddress">{{ walletAddress }}</ul>
         <p v-else>No accounts found.</p>
@@ -71,6 +71,7 @@
               currentChainName.value =store.getters['chains/getCurrentChainName'];
               walletAddress.value = computed(() => store.getters['wallet/getWallet']);
             }
+
             
             return{
               walletAddress,
@@ -78,7 +79,7 @@
               selectedChainId,
               chains,
               handleChainChange,
-              balance
+              balance,
             };
         },
     }
