@@ -1,7 +1,6 @@
 import { chains } from "./chainConfig";
 
 export async function fetchAndPrintNormalTransactionHistoryByNetwork(chainName,address) {
-    console.log('fetchAndPrintTransactionHistory',chains);
     if(!chains[chainName]){
         console.error(`Unsupported blockchain: ${chainName}`);
         return;

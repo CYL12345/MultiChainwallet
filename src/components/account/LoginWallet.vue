@@ -12,7 +12,10 @@
         <form @submit.prevent="enterAccount">
             <label for="privateKey">enter privateKey</label>
             <input type="text" id="privateKey" v-model="privateKey" required />
+            <label for="netwrok">enter network</label>
             <input type="text" id="network" v-model="network" required />
+            <label for="networkAccountPassword">enter password</label>
+            <input type="password" id="networkAccountPassword" v-model="networkAccountPassword"> 
             <button type="submit">LOGIN</button>
             <p v-if="error">{{ error }}</p>
         </form>
@@ -42,6 +45,7 @@
             const isAuthenticated = useLocalStorage('isAuthenticated',false);
             const privateKey = ref('');
             const network = ref('');
+            const networkAccountPassword = ref('');
 
             onMounted(() =>{
                 address.value = localStorage.getItem('address');
@@ -91,14 +95,18 @@
                 const account = wallet.connect(provider);
                 const balance = await account.getBalance();
                 const balanceETH = ethers.utils.formatEther(balance);
-                const chainName = 'ganache';
+                const chainName = "ganache";
                 store.dispatch('wallet/addWallet',{id:network.value, wallet:wallet.address, balance:balanceETH});
                 store.dispatch("chains/setCurrentChainName",chainName);
+                store.dispatch("chains/setCurrentChainId",network.value);
 
-                console.log('enterAccount', store.getters['chains/getCurrentChainName'],chainName);
                 await fetchAndPrintNormalTransactionHistoryByNetwork(chainName,wallet.address);
                 isAuthenticated.value = true;
-                router.push({name:'Home'});
+                
+                const encyptedAccountJson = await wallet.encrypt(networkAccountPassword.value);
+                localStorage.setItem("encyptedAccountJson",encyptedAccountJson);
+
+                router.push({name:'HomeView'});
               }catch (error){
                 console.error("enterAccount",error);
               }
@@ -111,7 +119,8 @@
                 loginWallet,
                 enterAccount,
                 privateKey,
-                network
+                network,
+                networkAccountPassword
             }
         }
     }

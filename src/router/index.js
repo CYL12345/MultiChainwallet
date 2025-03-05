@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import WalletGenerator from '@/components/account/WalletGenerator.vue';
 import LoginWallet from '@/components/account/LoginWallet.vue';
-import Home from '@/components/Home.vue';
+import HomeView from '@/components/HomeView.vue';
 import TransacationList from '@/components/modal/TransactionList.vue';
 import OrderTransactions from '@/components/modal/OrderTransactions.vue';
 import TradeHistory from '@/components/modal/TradeHistory.vue';
@@ -27,9 +27,9 @@ const routes = [
         component:TradeHistory
     },
     {
-        path:'/Home',
-        name:'Home',
-        component:Home,
+        path:'/HomeView',
+        name:'HomeView',
+        component:HomeView,
         meta:{requiresAuth:true},
         children:[
             {
